@@ -1,0 +1,51 @@
+#!/bin/bash
+
+set -e
+
+ADDON_DIR="${1:-$WOW_ADDON_DIR}"
+
+if [ -z "$ADDON_DIR" ]
+then
+  echo 'Set $WOW_ADDON_DIR or pass addon directory as argument!'
+  exit 1
+fi
+
+git_repo() {
+  git clone "$1" "$ADDON_DIR$2" 2> /dev/null || git -C "$ADDON_DIR$2" pull &> /dev/null
+}
+
+curse_project_slug() {
+echo "Installing Latest $1 from Curse"
+zip_url "https://wow.curseforge.com/projects/$1/files/latest"
+}
+
+wowace_slug() {
+echo "Installing Latest $1 from WowAce"
+zip_url "https://www.wowace.com/projects/$1/files/latest"
+}
+
+zip_url() {
+mkdir -p /tmp/wow-addon-install
+cd /tmp/wow-addon-install
+
+curl -s -L $1 --output addon.zip > /dev/null
+unzip -oq addon.zip -d "$ADDON_DIR"
+
+rm addon.zip
+}
+
+curse_project_slug scrap
+curse_project_slug big-wigs
+curse_project_slug little-wigs
+curse_project_slug capping-bg-timers
+curse_project_slug lootappraiser
+curse_project_slug lootappraiser_challenge
+curse_project_slug details
+curse_project_slug askmrrobot
+curse_project_slug raiderio
+
+wowace_slug blockchinese
+wowace_slug advancedinterfaceoptions
+
+echo "Installing ElvUI 11.12"
+zip_url https://www.tukui.org/downloads/elvui-11.12.zip
