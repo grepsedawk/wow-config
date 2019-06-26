@@ -1,12 +1,20 @@
 #!/bin/bash
 
+set -e
+declare -A processes
+declare -a nested_links
+
 WORKING_TEMP_DIR=$(mktemp -d -t tmp.XXXXXXXXXX)
+STATUS=0
 function finish {
+  echo $1
   rm -rf "$WORKING_TEMP_DIR"
+  for link in "${nested_links[@]}"; do
+    rm -f "$link"
+  done
+  exit $STATUS
 }
 trap finish EXIT
-
-set -e
 
 ADDON_DIR="${1:-$WOW_ADDON_DIR}"
 if [ -z "$ADDON_DIR" ]
@@ -20,45 +28,58 @@ git_repo() {
 }
 
 curse_project_slug() {
-echo "Installing Latest $1 from Curse"
-zip_url "https://wow.curseforge.com/projects/$1/files/latest"
+zip_url "https://wow.curseforge.com/projects/$1/files/latest" &
+processes[$1]=$!
 }
 
 wowace_slug() {
-echo "Installing Latest $1 from WowAce"
-zip_url "https://www.wowace.com/projects/$1/files/latest"
+zip_url "https://www.wowace.com/projects/$1/files/latest" &
+processes[$1]=$!
 }
 
 zip_url() {
-cd "$WORKING_TEMP_DIR"
+  cd "$WORKING_TEMP_DIR"
+  
+  addon_zip=$(mktemp -t XXXXX.addon.zip -p "$WORKING_TEMP_DIR")
 
-addon_zip=$(mktemp -t XXXXX.addon.zip -p "$WORKING_TEMP_DIR")
-
-curl -s -L $1 --output $addon_zip > /dev/null
-unzip -oq $addon_zip -d "$ADDON_DIR" $2
+  curl -s -L $1 --output $addon_zip > /dev/null
+  unzip -oq $addon_zip -d "$ADDON_DIR" $2
 }
 
 nested_zip_url() {
 NESTED_LINK="$ADDON_DIR$2"
 ln -s "$ADDON_DIR" "$NESTED_LINK"
-zip_url $1
-rm "$NESTED_LINK"
+zip_url $1 &
+pid=$!
 }
 
-curse_project_slug scrap &
-curse_project_slug big-wigs &
-curse_project_slug little-wigs &
-curse_project_slug capping-bg-timers &
-curse_project_slug lootappraiser &
-curse_project_slug lootappraiser_challenge &
-curse_project_slug details &
-curse_project_slug askmrrobot &
-curse_project_slug raiderio &
+elvui() {
+nested_zip_url https://git.tukui.org/elvui/elvui/-/archive/master/elvui-master.zip elvui-master
+processes[ElvUI]=$pid
+nested_links+=( "$NESTED_LINK" )
+}
 
-wowace_slug blockchinese &
-wowace_slug advancedinterfaceoptions &
+curse_project_slug scrap
+curse_project_slug big-wigs
+curse_project_slug little-wigs
+curse_project_slug capping-bg-timers
+curse_project_slug lootappraiser
+curse_project_slug lootappraiser_challenge
+curse_project_slug details
+curse_project_slug askmrrobot
+curse_project_slug raiderio
 
-echo "Installing Latest ElvUI from git.tukui.org"
-nested_zip_url https://git.tukui.org/elvui/elvui/-/archive/master/elvui-master.zip elvui-master &
+wowace_slug blockchinese
+wowace_slug advancedinterfaceoptions
 
-wait
+elvui
+
+for key in ${!processes[@]}; do
+  wait ${processes[key]}
+  if [[ $? -ne 0 ]]; then
+    echo "[\e[31mFailure\e[39m] $key"
+    STATUS=1
+  else
+    echo -e "[\e[32mSuccessful\e[39m] $key"
+  fi
+done
