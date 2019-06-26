@@ -10,3 +10,7 @@ jobs:
       - run: mkdir -p "$WOW_ADDON_DIR"
       - run: ./wow-addons
       - run: ls $WOW_ADDON_DIR
+      
+      - store_artifacts:
+          path: /home/circleci/wow/_retail_/Interface/AddOns/
+          destination: addons.zip
