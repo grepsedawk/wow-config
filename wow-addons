@@ -7,7 +7,6 @@ declare -a nested_links
 WORKING_TEMP_DIR=$(mktemp -d -t tmp.XXXXXXXXXX)
 STATUS=0
 function finish {
-  echo $1
   rm -rf "$WORKING_TEMP_DIR"
   for link in "${nested_links[@]}"; do
     rm -f "$link"
