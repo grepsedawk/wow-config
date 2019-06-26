@@ -1,9 +1,14 @@
 #!/bin/bash
 
+WORKING_TEMP_DIR=$(mktemp -d -t tmp.XXXXXXXXXX)
+function finish {
+  rm -rf "$WORKING_TEMP_DIR"
+}
+trap finish EXIT
+
 set -e
 
 ADDON_DIR="${1:-$WOW_ADDON_DIR}"
-
 if [ -z "$ADDON_DIR" ]
 then
   echo 'Set $WOW_ADDON_DIR or pass addon directory as argument!'
@@ -25,27 +30,31 @@ zip_url "https://www.wowace.com/projects/$1/files/latest"
 }
 
 zip_url() {
-mkdir -p /tmp/wow-addon-install
-cd /tmp/wow-addon-install
+cd "$WORKING_TEMP_DIR"
 
-curl -s -L $1 --output addon.zip > /dev/null
-unzip -oq addon.zip -d "$ADDON_DIR"
+addon_zip=$(mktemp -t XXXXX.addon.zip -p "$WORKING_TEMP_DIR")
+
+curl -s -L $1 --output $addon_zip > /dev/null
+unzip -oq $addon_zip -d "$ADDON_DIR" $2
+}
 
 rm addon.zip
 }
 
-curse_project_slug scrap
-curse_project_slug big-wigs
-curse_project_slug little-wigs
-curse_project_slug capping-bg-timers
-curse_project_slug lootappraiser
-curse_project_slug lootappraiser_challenge
-curse_project_slug details
-curse_project_slug askmrrobot
-curse_project_slug raiderio
+curse_project_slug scrap &
+curse_project_slug big-wigs &
+curse_project_slug little-wigs &
+curse_project_slug capping-bg-timers &
+curse_project_slug lootappraiser &
+curse_project_slug lootappraiser_challenge &
+curse_project_slug details &
+curse_project_slug askmrrobot &
+curse_project_slug raiderio &
 
-wowace_slug blockchinese
-wowace_slug advancedinterfaceoptions
+wowace_slug blockchinese &
+wowace_slug advancedinterfaceoptions &
 
 echo "Installing ElvUI 11.12"
-zip_url https://www.tukui.org/downloads/elvui-11.12.zip
+zip_url https://www.tukui.org/downloads/elvui-11.12.zip &
+
+wait
