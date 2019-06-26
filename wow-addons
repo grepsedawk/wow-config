@@ -43,7 +43,9 @@ zip_url() {
   addon_zip=$(mktemp -t XXXXX.addon.zip -p "$WORKING_TEMP_DIR")
 
   curl -s -L $1 --output $addon_zip > /dev/null
-  unzip -oq $addon_zip -d "$ADDON_DIR" $2
+  unzip -oq $addon_zip -d "$ADDON_DIR" $2 2>/dev/null
+
+  return $?
 }
 
 nested_zip_url() {
@@ -75,9 +77,10 @@ wowace_slug advancedinterfaceoptions
 elvui
 
 for key in ${!processes[@]}; do
-  wait ${processes[key]}
-  if [[ $? -ne 0 ]]; then
-    echo "[\e[31mFailure\e[39m] $key"
+  unset fail
+  wait ${processes[$key]} || fail=true
+  if [ $fail ]; then
+    echo -e "[\e[31mFailure\e[39m] $key"
     STATUS=1
   else
     echo -e "[\e[32mSuccessful\e[39m] $key"
