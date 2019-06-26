@@ -38,7 +38,11 @@ curl -s -L $1 --output $addon_zip > /dev/null
 unzip -oq $addon_zip -d "$ADDON_DIR" $2
 }
 
-rm addon.zip
+nested_zip_url() {
+NESTED_LINK="$ADDON_DIR$2"
+ln -s "$ADDON_DIR" "$NESTED_LINK"
+zip_url $1
+rm "$NESTED_LINK"
 }
 
 curse_project_slug scrap &
@@ -54,7 +58,7 @@ curse_project_slug raiderio &
 wowace_slug blockchinese &
 wowace_slug advancedinterfaceoptions &
 
-echo "Installing ElvUI 11.12"
-zip_url https://www.tukui.org/downloads/elvui-11.12.zip &
+echo "Installing Latest ElvUI from git.tukui.org"
+nested_zip_url https://git.tukui.org/elvui/elvui/-/archive/master/elvui-master.zip elvui-master &
 
 wait
