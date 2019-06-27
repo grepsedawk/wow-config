@@ -15,6 +15,7 @@ function finish {
 }
 trap finish EXIT
 
+CURSE_URL='https://www.curseforge.com'
 ADDON_DIR="${1:-$WOW_ADDON_DIR}"
 if [ -z "$ADDON_DIR" ]
 then
@@ -26,14 +27,23 @@ git_repo() {
   git clone "$1" "$ADDON_DIR$2" 2> /dev/null || git -C "$ADDON_DIR$2" pull &> /dev/null
 }
 
-curse_project_slug() {
-zip_url "https://wow.curseforge.com/projects/$1/files/latest" &
-processes[$1]=$!
+curse_slug() {
+  zip_path=$(curse_download_path "$1")
+  [ -z "$zip_path" ] && return 1
+
+  zip_url "$CURSE_URL"$zip_path &
+  processes[$1]=$!
+}
+
+curse_download_path() {
+  curl -sL "$CURSE_URL"/wow/addons/"$1"/download | \
+    grep Elerium.PublicProjectDownload.countdown | \
+    grep -o "/wow/addons/$1/download/.*/file"
 }
 
 wowace_slug() {
-zip_url "https://www.wowace.com/projects/$1/files/latest" &
-processes[$1]=$!
+  zip_url "https://www.wowace.com/projects/$1/files/latest" &
+  processes[$1]=$!
 }
 
 zip_url() {
@@ -60,15 +70,15 @@ processes[ElvUI]=$pid
 nested_links+=( "$NESTED_LINK" )
 }
 
-curse_project_slug scrap
-curse_project_slug big-wigs
-curse_project_slug little-wigs
-curse_project_slug capping-bg-timers
-curse_project_slug lootappraiser
-curse_project_slug lootappraiser_challenge
-curse_project_slug details
-curse_project_slug askmrrobot
-curse_project_slug raiderio
+curse_slug scrap
+curse_slug big-wigs
+curse_slug little-wigs
+curse_slug capping-bg-timers
+curse_slug lootappraiser
+curse_slug lootappraiser_challenge
+curse_slug details
+curse_slug askmrrobot
+curse_slug raiderio
 
 wowace_slug blockchinese
 wowace_slug advancedinterfaceoptions
