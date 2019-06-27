@@ -1,25 +1,54 @@
 #!/bin/bash
 
 set -e
+
+echo "Initializing..."
+
 declare -A processes
 declare -a nested_links
+declare -i status
 
 WORKING_TEMP_DIR=$(mktemp -d -t tmp.XXXXXXXXXX)
-STATUS=0
+print_status() {
+  incomplete=0
+  for key in ${!processes[@]}; do
+    pid=${processes[$key]}
+    if [ -d "/proc/${pid}" ]; then
+      echo -e "\r[\e[33mWaiting\e[39m] $key"
+      incomplete=1
+    else
+      wait $pid && \
+        echo -e "\r[\e[32mSuccessful\e[39m] $key" || \
+        (echo -e "[\e[31mFailure\e[39m] $key" && status=1)
+    fi
+  done
+
+  return $incomplete
+}
+
 function finish {
   rm -rf "$WORKING_TEMP_DIR"
   for link in "${nested_links[@]}"; do
     rm -f "$link"
   done
-  exit $STATUS
+
+  exit $status
 }
 trap finish EXIT
 
 CURSE_URL='https://www.curseforge.com'
+
 ADDON_DIR="${1:-$WOW_ADDON_DIR}"
 if [ -z "$ADDON_DIR" ]
 then
   echo 'Set $WOW_ADDON_DIR or pass addon directory as argument!'
+  exit 1
+fi
+
+GREPSFILE="${ADDON_DIR%/}/Grepsfile"
+if [ ! -f "$GREPSFILE" ]
+then
+  echo "No Grepsfile found in $ADDON_DIR"
   exit 1
 fi
 
@@ -58,43 +87,22 @@ zip_url() {
 }
 
 nested_zip_url() {
-NESTED_LINK="$ADDON_DIR$2"
-ln -s "$ADDON_DIR" "$NESTED_LINK"
-zip_url $1 &
-pid=$!
+  NESTED_LINK="$ADDON_DIR$2"
+  ln -s "$ADDON_DIR" "$NESTED_LINK"
+  zip_url $1 &
+  pid=$!
 }
 
 elvui() {
-nested_zip_url https://git.tukui.org/elvui/elvui/-/archive/master/elvui-master.zip elvui-master
-processes[ElvUI]=$pid
-nested_links+=( "$NESTED_LINK" )
+  nested_zip_url https://git.tukui.org/elvui/elvui/-/archive/master/elvui-master.zip elvui-master
+  processes[ElvUI]=$pid
+  nested_links+=( "$NESTED_LINK" )
 }
 
-curse_slug scrap
-curse_slug big-wigs
-curse_slug little-wigs
-curse_slug capping-bg-timers
-curse_slug lootappraiser
-curse_slug lootappraiser_challenge
-curse_slug details
-curse_slug askmrrobot
-curse_slug raiderio
-curse_slug fasterloot
-curse_slug wim-3
+source "${ADDON_DIR%/}/Grepsfile"
 
-wowace_slug blockchinese
-wowace_slug advancedinterfaceoptions
-wowace_slug weakauras-2
+echo "Installing..."
 
-elvui
-
-for key in ${!processes[@]}; do
-  unset fail
-  wait ${processes[$key]} || fail=true
-  if [ $fail ]; then
-    echo -e "[\e[31mFailure\e[39m] $key"
-    STATUS=1
-  else
-    echo -e "[\e[32mSuccessful\e[39m] $key"
-  fi
+while ! print_status; do
+  printf "\033[${#processes[@]}A"
 done
