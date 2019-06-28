@@ -104,5 +104,6 @@ source "${ADDON_DIR%/}/Grepsfile"
 echo "Installing..."
 
 while ! print_status; do
+  sleep 1
   printf "\033[${#processes[@]}A"
 done
