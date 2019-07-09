@@ -1,0 +1,56 @@
+diff --git a/Core/Service/Accounting/Transactions.lua b/Core/Service/Accounting/Transactions.lua
+index c5e80a1..7bbd517 100755
+--- a/Core/Service/Accounting/Transactions.lua
++++ b/Core/Service/Accounting/Transactions.lua
+@@ -74,6 +74,7 @@ function Transactions.OnInitialize()
+ 		:AddNumberField("bought")
+ 		:AddNumberField("avgBuyPrice")
+ 		:AddNumberField("avgResaleProfit")
++		:AddNumberField("totalResaleProfit")
+ 		:Commit()
+ 	private.baseStatsQuery = private.db:NewQuery()
+ 		:Select("quantity", "price")
+@@ -452,8 +453,9 @@ function Transactions.UpdateSummaryData(groupFilter, typeFilter, characterFilter
+ 		if sold > 0 and totalBought[itemString] > 0 then
+ 			local totalAvgSellPrice = totalSellPrice[itemString] / totalSold[itemString]
+ 			local totalAvgBuyPrice = totalBoughtPrice[itemString] / totalBought[itemString]
+-			local profit = totalAvgSellPrice - totalAvgBuyPrice
+-			private.dbSummary:BulkInsertNewRow(itemString, sold, totalAvgSellPrice, totalBought[itemString], totalAvgBuyPrice, profit)
++                        local profit = totalAvgSellPrice - totalAvgBuyPrice
++                        local totalProfit = profit * min(totalBought[itemString], totalSold[itemString])
++                        private.dbSummary:BulkInsertNewRow(itemString, sold, totalAvgSellPrice, totalBought[itemString], totalAvgBuyPrice, profit, totalProfit)
+ 		end
+ 	end
+ 	private.dbSummary:BulkInsertEnd()
+diff --git a/Core/UI/MainUI/Ledger/Revenue/Resale.lua b/Core/UI/MainUI/Ledger/Revenue/Resale.lua
+index 69bdb84..c0affef 100755
+--- a/Core/UI/MainUI/Ledger/Revenue/Resale.lua
++++ b/Core/UI/MainUI/Ledger/Revenue/Resale.lua
+@@ -234,6 +234,15 @@ function private.DrawResalePage()
+ 						:SetTextInfo("avgResaleProfit", private.GetMoneyText)
+ 						:SetSortInfo("avgResaleProfit")
+ 						:Commit()
++					:NewColumn("totalResaleProfit")
++						:SetTitles(L["Total Resale Profit"])
++						:SetWidth(140)
++						:SetFont(TSM.UI.Fonts.FRIZQT)
++						:SetFontHeight(12)
++						:SetJustifyH("RIGHT")
++						:SetTextInfo("totalResaleProfit", private.GetMoneyText)
++						:SetSortInfo("totalResaleProfit")
++						:Commit()
+ 					:Commit()
+ 				:SetQuery(private.summaryQuery)
+ 				:SetScript("OnRowClick", private.TableSelectionChanged)
+diff --git a/Locale/Locale.lua b/Locale/Locale.lua
+index d7bd1d7..c4524fb 100755
+--- a/Locale/Locale.lua
++++ b/Locale/Locale.lua
+@@ -1006,6 +1006,7 @@ do
+ 		TSM.L["Total Gold Collected: %s"] = "Total Gold Collected: %s"
+ 		TSM.L["Total Gold Earned:"] = "Total Gold Earned:"
+ 		TSM.L["Total Gold Spent:"] = "Total Gold Spent:"
++		TSM.L["Total Resale Profit"] = "TRP"
+ 		TSM.L["Total Price"] = "Total Price"
+ 		TSM.L["Total Profit:"] = "Total Profit:"
+ 		TSM.L["Total Value"] = "Total Value"
