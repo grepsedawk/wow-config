@@ -38,22 +38,22 @@ trap finish EXIT
 
 CURSE_URL='https://www.curseforge.com'
 
-ADDON_DIR="${1:-$WOW_ADDON_DIR}"
+ADDON_DIR="$(realpath -s "${1:-$WOW_ADDON_DIR}")"
 if [ -z "$ADDON_DIR" ]
 then
   echo 'Set $WOW_ADDON_DIR or pass addon directory as argument!'
   exit 1
 fi
 
-GREPSFILE="${ADDON_DIR%/}/Grepsfile"
-if [ ! -f "$GREPSFILE" ]
+ADDON_FILE="${ADDON_DIR}/Addonfile"
+if [ ! -f "$ADDON_FILE" ]
 then
-  echo "No Grepsfile found in $ADDON_DIR"
+  echo "No Addonfile found in $ADDON_DIR"
   exit 1
 fi
 
 git_repo() {
-  git clone "$1" "$ADDON_DIR$2" 2> /dev/null || git -C "$ADDON_DIR$2" pull &> /dev/null
+  git clone "$1" "$ADDON_DIR/$2" 2> /dev/null || git -C "$ADDON_DIR/$2" pull &> /dev/null
 }
 
 curse_slug() {
@@ -87,7 +87,7 @@ zip_url() {
 }
 
 nested_zip_url() {
-  NESTED_LINK="$ADDON_DIR$2"
+  NESTED_LINK="$ADDON_DIR/$2"
   ln -s "$ADDON_DIR" "$NESTED_LINK"
   zip_url $1 &
   pid=$!
@@ -99,7 +99,7 @@ elvui() {
   nested_links+=( "$NESTED_LINK" )
 }
 
-source "${ADDON_DIR%/}/Grepsfile"
+source "$ADDON_FILE"
 
 echo "Installing..."
 
