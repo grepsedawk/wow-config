@@ -8,6 +8,33 @@ declare -A processes
 declare -a nested_links
 declare -i status
 
+
+ADDON_DIR="$(realpath -s "$WOW_ADDON_DIR")"
+if [ -z "$ADDON_DIR" ]
+then
+  echo 'Set $WOW_ADDON_DIR or pass addon directory as argument!'
+  exit 1
+fi
+
+ADDON_FILE="${ADDON_DIR}/Addonfile"
+
+for arg in "$@"
+do
+    if [ "$arg" == "edit" ]
+    then
+      echo "Opening $ADDON_FILE for editing"
+      $EDITOR "$ADDON_FILE"
+      exit 0
+    fi
+done
+
+if [ ! -f "$ADDON_FILE" ]
+then
+  echo "No Addonfile found in $ADDON_DIR"
+  echo "Type wow-addons edit to edit Addonfile"
+  exit 1
+fi
+
 WORKING_TEMP_DIR=$(mktemp -d -t tmp.XXXXXXXXXX)
 print_status() {
   incomplete=0
@@ -37,21 +64,6 @@ function finish {
 trap finish EXIT
 
 CURSE_URL='https://www.curseforge.com'
-
-ADDON_DIR="$(realpath -s "${1:-$WOW_ADDON_DIR}")"
-if [ -z "$ADDON_DIR" ]
-then
-  echo 'Set $WOW_ADDON_DIR or pass addon directory as argument!'
-  exit 1
-fi
-
-ADDON_FILE="${ADDON_DIR}/Addonfile"
-if [ ! -f "$ADDON_FILE" ]
-then
-  echo "No Addonfile found in $ADDON_DIR"
-  exit 1
-fi
-
 git_repo() {
   git clone "$1" "$ADDON_DIR/$2" 2> /dev/null || git -C "$ADDON_DIR/$2" pull &> /dev/null
 }
