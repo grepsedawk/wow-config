@@ -69,17 +69,40 @@ git_repo() {
 }
 
 curse_slug() {
-  zip_path=$(curse_download_path "$1")
-  [ -z "$zip_path" ] && return 1
-
-  zip_url "$CURSE_URL"$zip_path &
+  curse_slug_fork "$1" &
   processes[$1]=$!
 }
 
+curse_slug_fork() {
+  zip_path=$(curse_download_path "$1")
+  echo ~~~"$zip_path" >> /tmp/qwer
+  [ -z "$zip_path" ] && return 1
+
+  zip_url "$CURSE_URL"$zip_path
+
+  return $?
+}
+
 curse_download_path() {
-  curl -sL "$CURSE_URL"/wow/addons/"$1"/download | \
-    grep Elerium.PublicProjectDownload.countdown | \
-    grep -o "/wow/addons/$1/download/.*/file"
+  cookie_curl \
+    --tlsv1.3 \
+  "$CURSE_URL"/wow/addons/"$1"/download \
+    | grep "If your download doesn't start automatically, click" \
+    | grep -o "/wow/addons/$1/download/.*/file"
+}
+
+cookie_curl (){
+  curl \
+    -sL \
+    -b /tmp/cookie.txt -c /tmp/cookie.txt \
+    -H 'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:69.0) Gecko/20100101 Firefox/69.0' \
+    -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' \
+    -H 'Accept-Language: en-US,en;q=0.5' \
+    -H 'DNT: 1' \
+    -H 'Connection: keep-alive' \
+    -H 'Upgrade-Insecure-Requests: 1' \
+    -H 'Cache-Control: max-age=0' \
+    $@
 }
 
 wowace_slug() {
@@ -92,7 +115,7 @@ zip_url() {
   
   addon_zip=$(mktemp -t XXXXX.addon.zip -p "$WORKING_TEMP_DIR")
 
-  curl -s -L $1 --output $addon_zip > /dev/null
+  cookie_curl --tlsv1.3 --output $addon_zip $1 > /dev/null
   unzip -oq $addon_zip -d "$ADDON_DIR" $2 2>/dev/null
 
   return $?
